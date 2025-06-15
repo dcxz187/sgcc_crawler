@@ -1,17 +1,35 @@
-import requests
 import os
 import json
 import time
-from config import HEADERS, REQUEST_DELAY
+from config import HEADERS
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+import aiohttp
+
+def get_driver():
+    # chrome_options = Options()
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument('--headless==new')  # 无界面
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--window-size=1920,1080')
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    return driver
+
+def request_page(driver, url, wait_time=3):
+    driver.get(url)
+    time.sleep(wait_time)  # 等待页面动态加载
+    return driver.page_source
 
 
-def request_url(url):
-    time.sleep(REQUEST_DELAY)
-    response = requests.get(url, headers=HEADERS)
-    response.raise_for_status()
-    response.encoding = 'utf-8'
-    return response.text
-
+async def request_url_async(url):
+    """异步版本的URL请求函数"""
+    async with aiohttp.ClientSession(headers=HEADERS) as session:
+        async with session.get(url) as response:
+            response.raise_for_status()  # 抛出HTTP错误（如404）
+            return await response.text()  # 异步获取响应内容
 
 def save_article_to_file(article, base_dir='articles'):
     os.makedirs(base_dir, exist_ok=True)

@@ -1,12 +1,11 @@
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor
-from config import BASE_URL, MAX_WORKERS
-from utils import request_url, save_article_to_file
-from db import insert_article
-from browser_utils import get_driver, request_page
+from config import BASE_URL
+from utils import save_article_to_file, get_driver, request_page, request_url_async
+from db import insert_article, check_article_exists
 from robots_check import check_robots
 from visualizer import analyze_by_page_title, plot_bar_chart, plot_pie_chart
+import asyncio
 
 def get_recent_dates(days=7):
     today = datetime.now()
@@ -38,37 +37,57 @@ def parse_issue_page(driver, issue_url, issue_date_str):
         })
     return articles
 
-def parse_article_detail(article):
+async def parse_article_detail_async(article):
+    """异步解析文章详情页"""
     try:
-        html = request_url(article['source_url'])
-        soup = BeautifulSoup(html, 'html.parser')
+        # 提前检查是否已存在（避免无效请求）
+        if check_article_exists(article["article_id"]):
+            print(f"跳过已存在文章: {article['article_title']}")
+            return
 
-        top_bar = soup.find('div', class_='top_bar')
-        page_title = top_bar.find(text=True, recursive=False).strip() if top_bar else ''
+        # 异步请求详情页
+        html = await request_url_async(article["source_url"])
+        soup = BeautifulSoup(html, "html.parser")
 
-        author_tag = soup.find('div', class_='author')
-        author = author_tag.get_text(strip=True) if author_tag else ''
+        top_bar = soup.find("div", class_="top_bar")
+        page_title = top_bar.find(text=True, recursive=False).strip() if top_bar else ""
+        author_tag = soup.find("div", class_="author")
+        author = author_tag.get_text(strip=True) if author_tag else ""
+        content_div = soup.find("div", class_="content")
+        content = content_div.get_text(separator="\n", strip=True) if content_div else ""
 
-        content_div = soup.find('div', class_='content')
-        content = content_div.get_text(separator='\n', strip=True)
+        # 更新文章信息
+        article.update({
+            "page_title": page_title,
+            "author": author,
+            "content": content,
+            "crawl_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
 
-        article['page_title'] = page_title
-        article['author'] = author
-        article['content'] = content
-        article['crawl_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # 同步数据库操作在异步中运行（使用线程池兼容）
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, insert_article, article)  # 同步函数转异步执行
+        save_article_to_file(article)  # 文件保存保持同步（IO密集型影响较小）
 
-        insert_article(article)
-        save_article_to_file(article)
         print(f"爬取成功: {article['article_title']}")
     except Exception as e:
         print(f"爬取失败: {article['source_url']} 错误: {e}")
 
-def crawl():
+async def crawl_async(mode="full"):
     if not check_robots():
         return
 
     driver = get_driver()
-    dates = get_recent_dates()
+
+    # 根据模式确定爬取日期范围
+    if mode == "full":
+        dates = get_recent_dates()  # 全量：最近7天
+    else:
+        # 增量：仅爬取当天
+        today = datetime.now().strftime("%Y%m/%d")
+        # 确保当天在有效日期范围内（避免非工作日无内容）
+        dates = [today] if today in get_recent_dates() else []
+
     all_articles = []
 
     for date in dates:
@@ -84,15 +103,31 @@ def crawl():
 
     driver.quit()
 
-    print(f"开始下载详情页，总计 {len(all_articles)} 篇文章")
+    # 过滤已存在的文章
+    all_articles = [
+        art for art in all_articles
+        if not check_article_exists(art["article_id"])]
+    print(f"开始异步下载详情页，总计 {len(all_articles)} 篇新文章")
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        executor.map(parse_article_detail, all_articles)
+    # 异步并发执行
+    await asyncio.gather(*[parse_article_detail_async(art) for art in all_articles])
 
-    # 新增：统计和绘图
-    category_counter = analyze_by_page_title(all_articles)
-    plot_bar_chart(category_counter)
-    plot_pie_chart(category_counter)
+    # 统计和绘图
+    if all_articles:
+        category_counter = analyze_by_page_title(all_articles)
+        plot_bar_chart(category_counter)
+        plot_pie_chart(category_counter)
+    else:
+        print("无新文章，无需统计绘图")
 
 if __name__ == '__main__':
-    crawl()
+    import argparse  # 新增参数解析库
+    parser = argparse.ArgumentParser(description="国家电网报爬虫")
+    parser.add_argument(
+        "--mode",
+        choices=["full", "incremental"],  # 仅允许这两个值
+        default="full",  # 默认全量模式
+        help="爬取模式：full（全量，爬最近7天）| incremental（增量，仅爬当天新文章）"
+    )
+    args = parser.parse_args()
+    asyncio.run(crawl_async(mode=args.mode))  # 运行异步主函数

@@ -2,11 +2,9 @@ import matplotlib.pyplot as plt
 from collections import Counter
 import os
 
-
 # 设置中文字体和解决负号显示问题
-plt.rcParams['font.sans-serif'] = ['PingFang SC']
+plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']
 plt.rcParams['axes.unicode_minus'] = False
-
 
 def analyze_by_page_title(articles):
     """
@@ -34,7 +32,7 @@ def plot_bar_chart(data, title="最近7天栏目分布", filename="category_dist
 
     full_path = os.path.join(output_dir, filename)
     plt.savefig(full_path)
-    print(f"📊 栏目分布图已保存为 {os.path.abspath(full_path)}")
+    print(f"栏目分布图已保存为 {os.path.abspath(full_path)}")
 
 
 def plot_pie_chart(data, title="最近7天栏目占比", filename="category_pie.png"):
@@ -52,4 +50,4 @@ def plot_pie_chart(data, title="最近7天栏目占比", filename="category_pie.
 
     full_path = os.path.join(output_dir, filename)
     plt.savefig(full_path)
-    print(f"🥧 栏目占比饼图已保存为 {os.path.abspath(full_path)}")
+    print(f"栏目占比饼图已保存为 {os.path.abspath(full_path)}")

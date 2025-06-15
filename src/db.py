@@ -35,3 +35,14 @@ def insert_article(article):
         conn.commit()
     finally:
         conn.close()
+
+def check_article_exists(article_id):
+    """检查文章是否已存在（基于article_id）"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 通过唯一键article_id查询是否存在记录
+            cursor.execute("SELECT 1 FROM articles WHERE article_id = %s", (article_id,))
+            return cursor.fetchone() is not None
+    finally:
+        conn.close()
