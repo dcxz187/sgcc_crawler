@@ -1,0 +1,37 @@
+import pymysql
+from config import MYSQL_CONFIG
+
+def get_connection():
+    return pymysql.connect(**MYSQL_CONFIG)
+
+def insert_article(article):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = '''
+                INSERT INTO articles (article_id, issue_date, page_number, page_title, article_title, author, content, source_url, crawl_time)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    issue_date=VALUES(issue_date),
+                    page_number=VALUES(page_number),
+                    page_title=VALUES(page_title),
+                    article_title=VALUES(article_title),
+                    author=VALUES(author),
+                    content=VALUES(content),
+                    source_url=VALUES(source_url),
+                    crawl_time=VALUES(crawl_time)
+            '''
+            cursor.execute(sql, (
+                article['article_id'],
+                article['issue_date'],
+                article['page_number'],
+                article['page_title'],
+                article['article_title'],
+                article['author'],
+                article['content'],
+                article['source_url'],
+                article['crawl_time']
+            ))
+        conn.commit()
+    finally:
+        conn.close()
