@@ -1,15 +1,16 @@
-import os
 import json
+import os
 import time
-from config import HEADERS
+
+import aiohttp
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
-import aiohttp
+
+from config import HEADERS
+
 
 def get_driver():
-    # chrome_options = Options()
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument('--headless==new')  # 无界面
     chrome_options.add_argument('--disable-gpu')

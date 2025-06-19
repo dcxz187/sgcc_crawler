@@ -10,33 +10,41 @@
 title值即为要读取的article_title字段，data-pageid即为要读取的page_number字段，data-contentid即为要读取的article_id字段，点击一篇文稿，会跳转到文稿的详情页 https://epaper.sgcctop.com/202506/13/con-746458.html ，主要由data-contentid的值决定，这个URL就是source_url需要的内容，进入文稿详情页后，会有一些<div class="xxx"></div>的盒子，比如class="top_bar"的盒子里面的内容就是page_title字段，author就是要读取的author字段，content就是要读取的content字段。
 
 
+
 ### 项目介绍
+
 本项目为国家电网报（ https://epaper.sgcctop.com ） 电子报的爬虫工具，支持全量爬取最近7天的稿件或增量爬取当天稿件，数据存储到 MySQL 数据库和本地文件系统，并生成栏目分布统计图。
 
 #### 功能
 
-全量爬取：抓取最近7天的所有稿件。
-增量爬取：仅抓取当天的缺失稿件。
-数据存储：
-- 每篇稿件正文保存为 .txt 文件。
-- 每篇稿件元数据保存为 .json 文件。
--所有数据存储到 MySQL 数据库。
-爬取礼貌：遵守 robots.txt，请求间隔 ≥ 0.5 秒，最大并发 ≤ 5。
-可视化：生成最近7天栏目分布图 。
-部署：支持 Docker 一键部署。
+- 全量爬取：抓取最近7天的所有稿件。
+- 增量爬取：仅抓取当天的缺失稿件。
+- 异步爬取，通过同时发多个请求、等待响应时切换任务、异步处理数据库操作。
+- 数据存储：每篇稿件正文保存为 .txt 文件，每篇稿件元数据保存为 .json 文件，所有数据存储到 MySQL 数据库。
+- 爬取礼貌：遵守 robots.txt，请求间隔 ≥ 0.5 秒，最大并发 ≤ 5。
+- 可视化：生成最近7天栏目分布图 。
+- 部署：支持 Docker 一键部署。
 
 
 #### 依赖
 
 Python 3.9+
-库：
-aiohttp=3.8.4
-beautifulsoup44.11.1
-mysql-connector-python8.0.33
-matplotlib3.7.1
+requirements.txt
+
+```
+pymysql~=1.1.1
+aiohttp~=3.10.11
+selenium~=4.24.0
+webdriver-manager~=4.0.2
+beautifulsoup4~=4.11.1
+matplotlib~=3.7.1
+requests~=2.32.3
+```
+
 
 
 ### 文件结构
+```
 sgcc_crawler/
 ├── src/
 │   ├── config.py             # 配置文件
@@ -54,13 +62,14 @@ sgcc_crawler/
 │   ├── category_distribution.png     # 条状图
 │   └── category_pie.png                   # 饼图
 └── README.md                # 项目说明
+```
 
 
 
 #### 安装与运行
 
 本地运行
-安装 MySQL 并创建数据库、表：
+- 安装 MySQL 并创建数据库、表：
 
 ```SQL
 CREATE DATABASE sgcc_news;
@@ -77,9 +86,9 @@ CREATE TABLE IF NOT EXISTS articles (
 );
 ```
 
-安装 Python 依赖：pip install -r requirements.txt
+- 安装 Python 依赖：pip install -r requirements.txt
 
-修改 src/config.py 中的 MySQL 配置：
+- 修改 src/config.py 中的 MySQL 配置：
 ```python
 MYSQL_CONFIG = {
     'host': 'localhost',
@@ -91,16 +100,15 @@ MYSQL_CONFIG = {
 ```
 
 
-运行爬虫：
-全量爬取：python src/crawler.py full
-
-增量爬取：python src/crawler.py incremental
-
+- 运行爬虫：
+全量爬取：python src/crawler.py --mode full
+增量爬取：python src/crawler.py --mode incremental
 
 
 
 
-Docker 运行
+
+Docker 部署
 
 确保 MySQL 容器运行：docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=your_password -e MYSQL_DATABASE=sgcc_news -p 3306:3306 mysql:latest
 
