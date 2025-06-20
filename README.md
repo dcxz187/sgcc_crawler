@@ -16,7 +16,7 @@ title值即为要读取的article_title字段，data-pageid即为要读取的pag
 
 ### 项目介绍
 
-本项目为国家电网报（ https://epaper.sgcctop.com ） 电子报的爬虫工具，支持全量爬取最近7天的稿件或增量爬取当天稿件，数据存储到 MySQL 数据库和本地文件系统，并生成栏目分布统计图。
+本项目为国家电网报（ https://epaper.sgcctop.com ） 电子报的爬虫工具，支持全量爬取最近7天的稿件或增量爬取当天稿件，数据存储到 MySQL 数据库和本地文件系统，并生成栏目分布统计图，GitHub仓库为https://github.com/dcxz187/sgcc_crawler.git。
 
 #### 功能
 
@@ -103,5 +103,5 @@ MYSQL_CONFIG = {
 
 
 - 运行爬虫：
-全量爬取：python src/crawler.py --mode full
-增量爬取：python src/crawler.py --mode incremental
+全量爬取：```python src/crawler.py --mode full```
+增量爬取：```python src/crawler.py --mode incremental```
