@@ -10,15 +10,32 @@ import argparse
 import schedule
 import time
 
-def get_recent_dates(days=7):
-    today = datetime.now()
-    dates = []
-    for i in range(days):
-        d = today - timedelta(days=i)
-        if d.weekday() < 5:
-            dates.append(d.strftime('%Y%m/%d'))
-    return dates
+"""获取最近7天的工作日"""
+def get_recent_dates(driver, target_count=7, max_check_days=25):
+    valid_dates = []
+    current_date = datetime.now()
+    days_checked = 0
 
+    while len(valid_dates) < target_count and days_checked < max_check_days:
+        date_str = current_date.strftime('%Y%m/%d')
+        test_url = f"{BASE_URL}/{date_str}/#page=2"
+
+        try:
+            request_page(driver, test_url)
+            valid_dates.append(date_str)
+            print(f"找到有效日期: {date_str}（第 {len(valid_dates)} 个）")
+        except Exception as e:
+            print(f"日期 {date_str} 无日报: {e}")
+
+        current_date -= timedelta(days=1)
+        days_checked += 1
+
+    if len(valid_dates) < target_count:
+        print(f"警告：仅找到 {len(valid_dates)} 个有效日期（已检查 {days_checked} 天）")
+    return valid_dates
+
+
+"""解析报纸页面，获取部分信息"""
 def parse_issue_page(driver, issue_url, issue_date_str):
     html = request_page(driver, issue_url)
     soup = BeautifulSoup(html, 'html.parser')
@@ -40,10 +57,10 @@ def parse_issue_page(driver, issue_url, issue_date_str):
         })
     return articles
 
+"""异步解析文章详情页面"""
 async def parse_article_detail_async(article):
-    """异步解析文章详情页"""
     try:
-        # 提前检查是否已存在（避免无效请求）
+        # 提前检查是否已存在
         if check_article_exists(article["article_id"]):
             print(f"跳过已存在文章: {article['article_title']}")
             return
@@ -67,10 +84,12 @@ async def parse_article_detail_async(article):
             "crawl_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
 
-        # 同步数据库操作在异步中运行（使用线程池兼容）
+        # 同步数据库操作在异步中运行
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, insert_article, article)  # 同步函数转异步执行
-        save_article_to_file(article)  # 文件保存保持同步（IO密集型影响较小）
+        # 异步执行数据库插入
+        await loop.run_in_executor(None, insert_article, article)
+        # 文件保存保持同步
+        save_article_to_file(article)
 
         print(f"爬取成功: {article['article_title']}")
     except Exception as e:
@@ -84,12 +103,18 @@ async def crawl_async(mode="full"):
 
     # 根据模式确定爬取日期范围
     if mode == "full":
-        dates = get_recent_dates()  # 全量：最近7天
+        # 全量：最近7天
+        dates = get_recent_dates(driver)
     else:
         # 增量：仅爬取当天
-        today = datetime.now().strftime("%Y%m/%d")
-        # 确保当天在有效日期范围内（避免非工作日无内容）
-        dates = [today] if today in get_recent_dates() else []
+        today_str = datetime.now().strftime('%Y%m/%d')
+        test_url = f"{BASE_URL}/{today_str}/#page=2"
+        try:
+            request_page(driver, test_url)
+            dates = [today_str]
+        except:
+            dates = []
+            print(f"当天 {today_str} 无日报")
 
     all_articles = []
     seen_article_ids = set()
@@ -114,8 +139,6 @@ async def crawl_async(mode="full"):
 
         print(f"日期 {date} 的报纸共找到 {len(all_articles) - pre_total} 篇文章")
         pre_total = len(all_articles)
-
-
 
     driver.quit()
 

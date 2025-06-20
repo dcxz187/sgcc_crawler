@@ -1,6 +1,9 @@
 ## 国家电网报爬虫
 
+
+
 ### 题目分析
+
 国家电网报只有工作日才发布，即周一到周五，我在6月15日（周日）这天，浏览器输入https://epaper.sgcctop.com 会直接跳转到 https://epaper.sgcctop.com/202506/13/#page=1 ，并且加载2-3秒后出画面，此时为第一页，是封面，获取不到需要的信息，从第二页到第九页，每两页构成一个浏览器页面，展示多篇文稿，一篇文稿的html源代码为
 
 ```html
@@ -23,7 +26,6 @@ title值即为要读取的article_title字段，data-pageid即为要读取的pag
 - 数据存储：每篇稿件正文保存为 .txt 文件，每篇稿件元数据保存为 .json 文件，所有数据存储到 MySQL 数据库。
 - 爬取礼貌：遵守 robots.txt，请求间隔 ≥ 0.5 秒，最大并发 ≤ 5。
 - 可视化：生成最近7天栏目分布图 。
-- 部署：支持 Docker 一键部署。
 
 
 #### 依赖
@@ -66,7 +68,7 @@ sgcc_crawler/
 
 
 
-#### 安装与运行
+### 安装与运行
 
 本地运行
 - 安装 MySQL 并创建数据库、表：
@@ -103,28 +105,3 @@ MYSQL_CONFIG = {
 - 运行爬虫：
 全量爬取：python src/crawler.py --mode full
 增量爬取：python src/crawler.py --mode incremental
-
-
-
-
-
-Docker 部署
-
-确保 MySQL 容器运行：docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=your_password -e MYSQL_DATABASE=sgcc_news -p 3306:3306 mysql:latest
-
-
-构建并运行爬虫容器：docker build -t sgcc_crawler .
-docker run --name crawler --link mysql:mysql -e MYSQL_HOST=mysql sgcc_crawler full
-
-
-增量爬取：将 full 替换为 incremental。
-
-
-
-输出
-
-数据库：文章存储在 sgcc_news.articles 表中。
-文件：
-文章正文：output/{article_id}.txt
-文章元数据（可选）：output/{article_id}.json
-栏目分布图：output/stats.png

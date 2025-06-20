@@ -1,4 +1,4 @@
-# SQL连接配置
+# MYSQL连接配置
 MYSQL_CONFIG = {
     'host': 'localhost',
     'user': 'root',
@@ -13,5 +13,5 @@ HEADERS = {
 }
 
 REQUEST_DELAY = 0.5  # 连续请求间隔
-MAX_WORKERS = 5  # 协程/线程总数
+MAX_WORKERS = 5  # 线程总数
 BASE_URL = 'https://epaper.sgcctop.com'

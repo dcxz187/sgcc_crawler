@@ -1,9 +1,11 @@
 import pymysql
 from config import MYSQL_CONFIG
 
+"""封装数据库连接"""
 def get_connection():
     return pymysql.connect(**MYSQL_CONFIG)
 
+"""插入文章数据"""
 def insert_article(article):
     conn = get_connection()
     try:
@@ -36,8 +38,8 @@ def insert_article(article):
     finally:
         conn.close()
 
+"""检查文章是否已存在（基于article_id）"""
 def check_article_exists(article_id):
-    """检查文章是否已存在（基于article_id）"""
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
